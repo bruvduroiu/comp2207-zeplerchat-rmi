@@ -28,7 +28,6 @@ public class NotificationSource {
         for (Integer port : registeredPorts) {
             try {
                 registry = LocateRegistry.getRegistry("localhost", port);
-                System.out.println(port);
                 Notifiable sink = (Notifiable) registry.lookup("inbox");
                 registeredSinks.add(sink);
             } catch (NotBoundException e) {
