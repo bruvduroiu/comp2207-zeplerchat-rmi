@@ -2,22 +2,21 @@ package com.bogdanbuduroiu.zeplerchat.client.controller;
 
 import com.bogdanbuduroiu.zeplerchat.common.model.comms.Discovery;
 
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.SocketTimeoutException;
+import java.net.*;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
 
 /**
  * Created by bogdanbuduroiu on 10/12/2016.
  */
-public class RegistryDiscoveryWorker implements Callable<Set<Integer>> {
+public class RegistryDiscoveryWorker implements Callable<List<Integer>> {
 
     int attempts = 3;
 
-    public Set<Integer> call() throws Exception {
+    public List<Integer> call() throws Exception {
         DatagramSocket socket = new DatagramSocket();
         socket.setSoTimeout(3000);
 
@@ -43,8 +42,12 @@ public class RegistryDiscoveryWorker implements Callable<Set<Integer>> {
 
             String message = new String(recvPacket.getData()).trim();
 
+            if (message.equals(Discovery.PORT_ALREADY_REGISTERED)) {
+
+            }
+
             if (!message.startsWith(Discovery.SERVER_DISCOVERY)) {
-                HashSet<Integer> ports = new HashSet<Integer>();
+                ArrayList<Integer> ports = new ArrayList<Integer>();
                 String[] parse = message.split(",");
                 for (String port : parse)
                     ports.add(Integer.parseInt(port));
@@ -52,6 +55,6 @@ public class RegistryDiscoveryWorker implements Callable<Set<Integer>> {
                 return ports;
             }
         }
-        return new HashSet<Integer>();
+        return new ArrayList<Integer>();
     }
 }

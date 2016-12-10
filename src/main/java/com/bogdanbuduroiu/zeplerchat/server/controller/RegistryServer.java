@@ -23,8 +23,6 @@ public class RegistryServer implements Runnable {
     public void run() {
         DatagramSocket socket;
 
-        registeredPorts.add(1234);
-
         try {
             socket = new DatagramSocket(8888, InetAddress.getLocalHost());
 

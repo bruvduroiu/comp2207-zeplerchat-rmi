@@ -11,7 +11,7 @@ public class NotificationSink extends UnicastRemoteObject implements Notifiable 
     public NotificationSink() throws RemoteException {
     }
 
-    public void sendNotification(Notification notification) {
-
+    public void sendNotification(Notification notification) throws RemoteException {
+        System.out.println(notification.getUsername() + ": " + notification.getMessage());
     }
 }

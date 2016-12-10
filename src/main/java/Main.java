@@ -9,13 +9,6 @@ import java.util.concurrent.ExecutionException;
 public class Main {
 
     public static void main(String[] args) {
-        try {
-            new Thread(new RegistryServer()).start();
-            new Client();
-        } catch (ExecutionException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        new Thread(new RegistryServer()).start();
     }
 }
