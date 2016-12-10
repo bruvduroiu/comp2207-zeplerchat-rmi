@@ -42,22 +42,35 @@ public class RegistryServer implements Runnable {
                 System.out.println(getClass().getName() + ">>> Packet received; data: " + message);
 
 
+                byte[] confirmationData;
+                DatagramPacket sendPacket;
                 if (message.equals(Discovery.SERVER_DISCOVERY)) {
-
-                    byte[] confirmationData;
 
                     if (registeredPorts.contains(packet.getPort())) {
                         confirmationData = Discovery.PORT_ALREADY_REGISTERED.getBytes();
+                        sendPacket = new DatagramPacket(confirmationData, confirmationData.length, packet.getAddress(), packet.getPort());
+                        socket.send(sendPacket);
                     } else {
                         registeredPorts.add(packet.getPort());
                         String confirmationString = "";
                         for (Integer port : registeredPorts)
                             confirmationString += port.toString() + ",";
                         confirmationData = confirmationString.getBytes();
+
+                        for (Integer port : registeredPorts) {
+                            sendPacket = new DatagramPacket(confirmationData, confirmationData.length, packet.getAddress(), port);
+                            socket.send(sendPacket);
+                        }
                     }
 
-                    DatagramPacket sendPacket = new DatagramPacket(confirmationData, confirmationData.length, packet.getAddress(), packet.getPort());
 
+                }
+                else if (message.equals(Discovery.REFRESH_HOSTS)) {
+                    String confirmationString = "";
+                    for (Integer port : registeredPorts)
+                        confirmationString += port.toString() + ",";
+                    confirmationData = confirmationString.getBytes();
+                    sendPacket = new DatagramPacket(confirmationData,confirmationData.length, packet.getAddress(), packet.getPort());
                     socket.send(sendPacket);
                 }
             }
