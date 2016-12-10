@@ -105,10 +105,10 @@ public class Client {
             Client client = new Client();
 
             System.out.print("Enter your username to log in:");
-            client.myUsername = in.next();
+            client.myUsername = in.nextLine();
 
             String input;
-            while (!(input=in.next()).equals("/quit")) {
+            while (!(input=in.nextLine()).equals("/quit")) {
                 client.refreshHosts();
                 Notification notif = new Notification(client.myUsername, input);
                 client.send(notif);
