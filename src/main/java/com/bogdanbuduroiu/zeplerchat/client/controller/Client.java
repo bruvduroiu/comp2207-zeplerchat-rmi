@@ -4,19 +4,16 @@ import com.bogdanbuduroiu.zeplerchat.common.model.comms.Discovery;
 import com.bogdanbuduroiu.zeplerchat.common.model.notifs.Notification;
 import com.bogdanbuduroiu.zeplerchat.common.model.notifs.NotificationSink;
 import com.bogdanbuduroiu.zeplerchat.common.model.notifs.NotificationSource;
+import com.bogdanbuduroiu.zeplerchat.server.controller.RegistryServer;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.net.*;
 import java.rmi.AlreadyBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 
 /**
  * Created by bogdanbuduroiu on 10/12/2016.
@@ -24,11 +21,16 @@ import java.util.concurrent.Future;
 public class Client {
 
     private Registry clientRegistry;
+
     private List<Integer> liveClients;
-    private NotificationSink inbox;
-    private NotificationSource outbox;
     String myUsername;
     int myPort;
+
+    private NotificationSink inbox;
+    private NotificationSource outbox;
+
+    private CountDownLatch initializeLatch;
+    private CountDownLatch portsLatch;
 
     public Client() throws ExecutionException, InterruptedException {
         initializeClient();
@@ -39,13 +41,27 @@ public class Client {
     private void initializeClient() throws ExecutionException, InterruptedException {
 
         ExecutorService executor = Executors.newSingleThreadExecutor();
-
         Future<List<Integer>> future = executor.submit(new RegistryDiscoveryWorker());
-
         liveClients = future.get();
-        myPort = liveClients.get(liveClients.size()-1);
-
         executor.shutdown();
+
+        if (liveClients.isEmpty()) {
+            initializeLatch = new CountDownLatch(1);
+            portsLatch = new CountDownLatch(1);
+            RegistryServer registryServer = new RegistryServer(initializeLatch, portsLatch);
+
+            registryServer.start();
+
+            executor = Executors.newSingleThreadExecutor();
+
+            initializeLatch.await();
+
+            future = executor.submit(new RegistryDiscoveryWorker());
+
+            liveClients = future.get();
+            executor.shutdown();
+        }
+
     }
 
     public void send(Notification notification) {
@@ -56,11 +72,16 @@ public class Client {
         }
     }
 
-    private void bindInbox() {
+    private void bindInbox() throws InterruptedException{
 
         try {
+            myPort = liveClients.get(liveClients.size() - 1);
+
             clientRegistry = LocateRegistry.createRegistry(myPort);
             inbox = new NotificationSink();
+
+            if (portsLatch != null)
+                portsLatch.await();
 
             clientRegistry.bind("inbox", inbox);
 
