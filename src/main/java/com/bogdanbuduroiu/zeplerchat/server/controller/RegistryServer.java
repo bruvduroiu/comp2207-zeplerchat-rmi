@@ -1,6 +1,7 @@
 package com.bogdanbuduroiu.zeplerchat.server.controller;
 
 import com.bogdanbuduroiu.zeplerchat.common.model.comms.Discovery;
+
 import javax.json.*;
 
 import java.io.*;
@@ -8,11 +9,8 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
-import java.rmi.RemoteException;
-import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 /**
@@ -21,7 +19,7 @@ import java.util.concurrent.CountDownLatch;
 
 public class RegistryServer extends Thread {
 
-    Set<Integer> registeredPorts = new HashSet<Integer>();
+    List<Integer> registeredPorts = new ArrayList<Integer>();
 
     private CountDownLatch latchInitialize;
 
@@ -33,11 +31,6 @@ public class RegistryServer extends Thread {
     public void run() {
         DatagramSocket socket;
 
-        ObjectInputStream ois;
-        ByteArrayInputStream bais;
-
-        ObjectOutputStream oos;
-        ByteArrayOutputStream baos;
 
         try {
             socket = new DatagramSocket(8888, InetAddress.getLocalHost());
@@ -46,6 +39,7 @@ public class RegistryServer extends Thread {
 
             while (true) {
 
+                ByteArrayInputStream bais;
                 byte[] recvBuffer = new byte[15000];
                 DatagramPacket packet = new DatagramPacket(recvBuffer, recvBuffer.length);
 
@@ -55,12 +49,9 @@ public class RegistryServer extends Thread {
 
                 socket.receive(packet);
                 bais = new ByteArrayInputStream(packet.getData());
-                ois = new ObjectInputStream(bais);
 
-                JsonObject recvJson = (JsonObject) ois.readObject();
+                JsonObject recvJson = Json.createReader(bais).readObject();
 
-                ois.close();
-                bais.close();
 
                 String packetType = recvJson.getString("packet-type");
 
@@ -74,37 +65,25 @@ public class RegistryServer extends Thread {
                 if (packetType.equals(Discovery.SERVER_DISCOVERY)) {
 
                     if (registeredPorts.contains(packet.getPort())) {
-                        baos = new ByteArrayOutputStream();
-                        oos = new ObjectOutputStream(baos);
 
-                        oos.writeObject(Discovery.JSON_PORT_ALREADY_REGISTERED);
-                        oos.flush();
-
-                        confirmationData = baos.toByteArray();
+                        confirmationData = Discovery.JSON_PORT_ALREADY_REGISTERED.toString().getBytes();
                         sendPacket = new DatagramPacket(confirmationData, confirmationData.length, packet.getAddress(), packet.getPort());
                         socket.send(sendPacket);
-                        baos.close();
-                        oos.close();
                     } else {
                         registeredPorts.add(packet.getPort());
 
-                        JsonObject response = buildHostsData();
 
-                        baos = new ByteArrayOutputStream();
-                        oos = new ObjectOutputStream(baos);
+                        JsonObject response = Json.createObjectBuilder()
+                                .add("packet-type", Discovery.SERVER_DISCOVERED)
+                                .add("port", registeredPorts.get(registeredPorts.size()-1))
+                                .build();
 
-                        oos.writeObject(response);
-                        oos.flush();
+                        confirmationData = response.toString().getBytes();
 
-                        baos.close();
-                        oos.close();
+                        socket.send(new DatagramPacket(confirmationData, confirmationData.length, packet.getAddress(), packet.getPort()));
 
-                        confirmationData = baos.toByteArray();
+                        broadcastHosts();
 
-                        for (Integer port : registeredPorts) {
-                            sendPacket = new DatagramPacket(confirmationData, confirmationData.length, packet.getAddress(), port);
-                            socket.send(sendPacket);
-                        }
                     }
 
 
@@ -112,16 +91,8 @@ public class RegistryServer extends Thread {
 
                     JsonObject response = buildHostsData();
 
-                    baos = new ByteArrayOutputStream();
-                    oos = new ObjectOutputStream(baos);
+                    confirmationData = response.toString().getBytes();
 
-                    oos.writeObject(response);
-                    oos.flush();
-
-                    baos.close();
-                    oos.close();
-
-                    confirmationData = baos.toByteArray();
                     sendPacket = new DatagramPacket(confirmationData, confirmationData.length, packet.getAddress(), packet.getPort());
                     socket.send(sendPacket);
                 }
@@ -131,9 +102,21 @@ public class RegistryServer extends Thread {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
         }
+    }
+
+    private void broadcastHosts() throws IOException {
+        DatagramSocket socket = new DatagramSocket();
+        DatagramPacket packet;
+
+        byte[] sendData = buildHostsData().toString().getBytes();
+
+        for (Integer port : registeredPorts) {
+            packet = new DatagramPacket(sendData, sendData.length, InetAddress.getLocalHost(), port);
+            socket.send(packet);
+        }
+
+
     }
 
     private JsonObject buildHostsData() {
@@ -141,6 +124,7 @@ public class RegistryServer extends Thread {
         String confirmationString = "";
         for (Integer port : registeredPorts)
             confirmationString += port.toString() + ",";
+        confirmationString = new StringBuilder(confirmationString).deleteCharAt(confirmationString.length() - 1).toString();
 
         JsonObject jsonObject = Json.createObjectBuilder()
                 .add("packet-type", Discovery.HOSTS_DATA)

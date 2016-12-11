@@ -9,6 +9,7 @@ import com.bogdanbuduroiu.zeplerchat.server.controller.RegistryServer;
 import java.io.IOException;
 import java.net.*;
 import java.rmi.AlreadyBoundException;
+import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -31,18 +32,20 @@ public class Client {
 
     private CountDownLatch initializeLatch;
 
-    public Client() throws ExecutionException, InterruptedException, RemoteException {
+    public Client() throws ExecutionException, InterruptedException, RemoteException, NotBoundException {
         initializeClient();
+        bindSource();
+        inbox = new NotificationSink();
+        new Thread(inbox).start();
     }
 
     private void initializeClient() throws ExecutionException, InterruptedException {
 
         ExecutorService executor = Executors.newSingleThreadExecutor();
-        Future<List<Integer>> future = executor.submit(new RegistryDiscoveryWorker());
-        liveClients = future.get();
-        executor.shutdown();
+        Future<Integer> future = executor.submit(new RegistryDiscoveryWorker());
 
-        if (liveClients.isEmpty()) {
+
+        if (future.get() == null) {
             initializeLatch = new CountDownLatch(1);
             RegistryServer registryServer = new RegistryServer(initializeLatch);
 
@@ -54,7 +57,8 @@ public class Client {
 
             future = executor.submit(new RegistryDiscoveryWorker());
 
-            liveClients = future.get();
+            myPort = future.get();
+
             executor.shutdown();
         }
 
@@ -62,14 +66,21 @@ public class Client {
 
     public void send(Notification notification) {
         try {
-            outbox.sendNotification(notification);
+            outbox.broadcastNotification(notification);
         } catch (RemoteException e) {
             e.printStackTrace();
         }
     }
 
-    private void bindSource() throws InterruptedException{
+    private void bindSource() throws RemoteException {
+        outbox = new NotificationSource();
 
+        Registry registry = LocateRegistry.createRegistry(myPort);
+        try {
+            registry.bind("source", outbox);
+        } catch (AlreadyBoundException e) {
+            e.printStackTrace();
+        }
     }
 
     public static void main(String[] args) {
@@ -91,6 +102,8 @@ public class Client {
         } catch (InterruptedException e) {
             e.printStackTrace();
         } catch (IOException e) {
+            e.printStackTrace();
+        } catch (NotBoundException e) {
             e.printStackTrace();
         }
     }
