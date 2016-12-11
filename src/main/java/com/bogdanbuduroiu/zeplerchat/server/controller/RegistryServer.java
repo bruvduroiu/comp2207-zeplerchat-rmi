@@ -1,8 +1,9 @@
 package com.bogdanbuduroiu.zeplerchat.server.controller;
 
 import com.bogdanbuduroiu.zeplerchat.common.model.comms.Discovery;
+import javax.json.*;
 
-import java.io.IOException;
+import java.io.*;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -17,21 +18,26 @@ import java.util.concurrent.CountDownLatch;
 /**
  * Created by bogdanbuduroiu on 10/12/2016.
  */
+
 public class RegistryServer extends Thread {
 
     Set<Integer> registeredPorts = new HashSet<Integer>();
 
     private CountDownLatch latchInitialize;
-    private CountDownLatch portsLatch;
 
-    public RegistryServer(CountDownLatch latchInitialize, CountDownLatch portsLatch) {
+    public RegistryServer(CountDownLatch latchInitialize) {
         this.latchInitialize = latchInitialize;
-        this.portsLatch = portsLatch;
     }
 
     @Override
     public void run() {
         DatagramSocket socket;
+
+        ObjectInputStream ois;
+        ByteArrayInputStream bais;
+
+        ObjectOutputStream oos;
+        ByteArrayOutputStream baos;
 
         try {
             socket = new DatagramSocket(8888, InetAddress.getLocalHost());
@@ -43,39 +49,57 @@ public class RegistryServer extends Thread {
                 byte[] recvBuffer = new byte[15000];
                 DatagramPacket packet = new DatagramPacket(recvBuffer, recvBuffer.length);
 
+
                 if (latchInitialize.getCount() > 0)
                     latchInitialize.countDown();
 
                 socket.receive(packet);
+                bais = new ByteArrayInputStream(packet.getData());
+                ois = new ObjectInputStream(bais);
 
+                JsonObject recvJson = (JsonObject) ois.readObject();
 
-                String message = new String(packet.getData()).trim();
+                ois.close();
+                bais.close();
 
-                System.out.println(getClass().getName() + ">>> Discovery packet received from: " + packet.getAddress().getHostAddress());
-                System.out.println(getClass().getName() + ">>> Packet received; data: " + message);
+                String packetType = recvJson.getString("packet-type");
+
+//                System.out.println(getClass().getName() + ">>> Discovery packet received from: " + packet.getAddress().getHostAddress());
+//                System.out.println(getClass().getName() + ">>> Packet received; data: " + packetType);
 
 
                 byte[] confirmationData;
                 DatagramPacket sendPacket;
-                if (message.equals(Discovery.SERVER_DISCOVERY)) {
+
+                if (packetType.equals(Discovery.SERVER_DISCOVERY)) {
 
                     if (registeredPorts.contains(packet.getPort())) {
-                        confirmationData = Discovery.PORT_ALREADY_REGISTERED.getBytes();
+                        baos = new ByteArrayOutputStream();
+                        oos = new ObjectOutputStream(baos);
+
+                        oos.writeObject(Discovery.JSON_PORT_ALREADY_REGISTERED);
+                        oos.flush();
+
+                        confirmationData = baos.toByteArray();
                         sendPacket = new DatagramPacket(confirmationData, confirmationData.length, packet.getAddress(), packet.getPort());
                         socket.send(sendPacket);
+                        baos.close();
+                        oos.close();
                     } else {
                         registeredPorts.add(packet.getPort());
 
-                        if (portsLatch.getCount() > 0)
-                            portsLatch.countDown();
+                        JsonObject response = buildHostsData();
 
-                        if (latchInitialize.getCount() != 0)
-                            latchInitialize.countDown();
+                        baos = new ByteArrayOutputStream();
+                        oos = new ObjectOutputStream(baos);
 
-                        String confirmationString = "";
-                        for (Integer port : registeredPorts)
-                            confirmationString += port.toString() + ",";
-                        confirmationData = confirmationString.getBytes();
+                        oos.writeObject(response);
+                        oos.flush();
+
+                        baos.close();
+                        oos.close();
+
+                        confirmationData = baos.toByteArray();
 
                         for (Integer port : registeredPorts) {
                             sendPacket = new DatagramPacket(confirmationData, confirmationData.length, packet.getAddress(), port);
@@ -84,11 +108,20 @@ public class RegistryServer extends Thread {
                     }
 
 
-                } else if (message.equals(Discovery.REFRESH_HOSTS)) {
-                    String confirmationString = "";
-                    for (Integer port : registeredPorts)
-                        confirmationString += port.toString() + ",";
-                    confirmationData = confirmationString.getBytes();
+                } else if (packetType.equals(Discovery.REFRESH_HOSTS)) {
+
+                    JsonObject response = buildHostsData();
+
+                    baos = new ByteArrayOutputStream();
+                    oos = new ObjectOutputStream(baos);
+
+                    oos.writeObject(response);
+                    oos.flush();
+
+                    baos.close();
+                    oos.close();
+
+                    confirmationData = baos.toByteArray();
                     sendPacket = new DatagramPacket(confirmationData, confirmationData.length, packet.getAddress(), packet.getPort());
                     socket.send(sendPacket);
                 }
@@ -98,6 +131,23 @@ public class RegistryServer extends Thread {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
         }
     }
+
+    private JsonObject buildHostsData() {
+
+        String confirmationString = "";
+        for (Integer port : registeredPorts)
+            confirmationString += port.toString() + ",";
+
+        JsonObject jsonObject = Json.createObjectBuilder()
+                .add("packet-type", Discovery.HOSTS_DATA)
+                .add("hosts", Json.createArrayBuilder().add(confirmationString))
+                .build();
+
+        return jsonObject;
+    }
+
 }
