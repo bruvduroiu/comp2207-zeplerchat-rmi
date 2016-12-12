@@ -1,14 +1,14 @@
 package com.bogdanbuduroiu.zeplerchat.server.controller;
 
 import com.bogdanbuduroiu.zeplerchat.common.model.comms.Discovery;
+import com.bogdanbuduroiu.zeplerchat.common.model.comms.Request;
 import com.bogdanbuduroiu.zeplerchat.common.model.config.Config;
 
 import javax.json.*;
 
 import java.io.*;
 import java.net.*;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.*;
 
 /**
@@ -21,9 +21,14 @@ public class RegistryServer extends Thread {
 
     private CountDownLatch latchInitialize;
     private final ScheduledExecutorService hostsScheduler = Executors.newSingleThreadScheduledExecutor();
+    private Deque<Request> requestQueue;
+
+    private DatagramSocket socket;
+    ByteArrayInputStream bais;
 
     public RegistryServer(CountDownLatch latchInitialize) {
         this.latchInitialize = latchInitialize;
+        this.requestQueue = new ArrayDeque<>();
     }
 
     @Override
@@ -45,7 +50,9 @@ public class RegistryServer extends Thread {
 
             while (true) {
 
-                ByteArrayInputStream bais;
+                while (!requestQueue.isEmpty())
+                    processRequest(requestQueue.pollFirst());
+
                 byte[] recvBuffer = new byte[15000];
                 DatagramPacket packet = new DatagramPacket(recvBuffer, recvBuffer.length);
 
@@ -54,66 +61,58 @@ public class RegistryServer extends Thread {
                     latchInitialize.countDown();
 
                 socket.receive(packet);
+
                 bais = new ByteArrayInputStream(packet.getData());
 
                 JsonObject recvJson = Json.createReader(bais).readObject();
 
-
-                String packetType = recvJson.getString("packet-type");
-
-
-                byte[] confirmationData;
-                DatagramPacket sendPacket;
-
-                if (packetType.equals(Discovery.SERVER_DISCOVERY)) {
-
-                    if (registeredPorts.contains(packet.getPort())) {
-
-                        confirmationData = Discovery.JSON_PORT_ALREADY_REGISTERED.toString().getBytes();
-                        sendPacket = new DatagramPacket(confirmationData, confirmationData.length, packet.getAddress(), packet.getPort());
-                        socket.send(sendPacket);
-                    } else {
-
-
-                        JsonObject response = Json.createObjectBuilder()
-                                .add("packet-type", Discovery.SERVER_DISCOVERED)
-                                .add("port", packet.getPort())
-                                .build();
-
-                        confirmationData = response.toString().getBytes();
-
-                        socket.send(new DatagramPacket(confirmationData, confirmationData.length, packet.getAddress(), packet.getPort()));
-
-                        while (true) {
-                            byte[] recvData = new byte[15000];
-                            packet = new DatagramPacket(recvData, recvData.length);
-
-                            socket.receive(packet);
-
-                            bais = new ByteArrayInputStream(packet.getData());
-                            JsonObject confirm = Json.createReader(bais).readObject();
-
-                            if (confirm.getString("packet-type").equals(Discovery.CONFIRM_BIND)) {
-                                registeredPorts.add(confirm.getInt("port"));
-                                break;
-                            }
-                        }
-
-                        broadcastHosts();
-
-                    }
-
-
-                } else if (packetType.equals(Discovery.REFRESH_HOSTS)) {
-
-                    broadcastHosts();
-                }
+                this.requestQueue.addLast(new Request(recvJson, packet.getAddress(), packet.getPort()));
 
             }
         } catch (SocketException e) {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    private void processRequest(Request request) throws IOException {
+        String packetType = request.recvJson.getString("packet-type");
+        socket = new DatagramSocket();
+
+        byte[] confirmationData;
+        DatagramPacket packet;
+
+        if (packetType.equals(Discovery.SERVER_DISCOVERY)) {
+
+            if (registeredPorts.contains(request.port)) {
+
+                JsonObject response = Json.createObjectBuilder()
+                        .add("packet-type", Discovery.PORT_ALREADY_REGISTERED)
+                        .add("port", request.port)
+                        .build();
+
+                confirmationData = response.toString().getBytes();
+                packet = new DatagramPacket(confirmationData, confirmationData.length, request.address, request.port);
+                socket.send(packet);
+            } else {
+                JsonObject response = Json.createObjectBuilder()
+                        .add("packet-type", Discovery.SERVER_DISCOVERED)
+                        .add("port", request.port)
+                        .build();
+
+                confirmationData = response.toString().getBytes();
+
+                socket.send(new DatagramPacket(confirmationData, confirmationData.length, request.address, request.port));
+            }
+
+
+        } else if (packetType.equals(Discovery.REFRESH_HOSTS)) {
+            broadcastHosts();
+        } else if (packetType.equals(Discovery.CONFIRM_BIND)) {
+            registeredPorts.add(request.recvJson.getInt("port"));
+            System.out.println("Received Bind COnfirm.");
+            broadcastHosts();
         }
     }
 
