@@ -60,9 +60,6 @@ public class RegistryServer extends Thread {
 
                 String packetType = recvJson.getString("packet-type");
 
-//                System.out.println(getClass().getName() + ">>> Discovery packet received from: " + packet.getAddress().getHostAddress());
-//                System.out.println(getClass().getName() + ">>> Packet received; data: " + packetType);
-
 
                 byte[] confirmationData;
                 DatagramPacket sendPacket;

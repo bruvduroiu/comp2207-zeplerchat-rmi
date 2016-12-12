@@ -9,7 +9,6 @@ import com.bogdanbuduroiu.zeplerchat.server.controller.RegistryServer;
 import javax.json.Json;
 import java.io.IOException;
 import java.net.*;
-import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
