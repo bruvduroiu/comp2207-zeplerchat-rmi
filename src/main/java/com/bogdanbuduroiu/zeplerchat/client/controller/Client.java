@@ -6,6 +6,7 @@ import com.bogdanbuduroiu.zeplerchat.common.model.notifs.NotificationSink;
 import com.bogdanbuduroiu.zeplerchat.common.model.notifs.NotificationSource;
 import com.bogdanbuduroiu.zeplerchat.server.controller.RegistryServer;
 
+import javax.json.Json;
 import java.io.IOException;
 import java.net.*;
 import java.rmi.AlreadyBoundException;
@@ -21,9 +22,6 @@ import java.util.concurrent.*;
  */
 public class Client {
 
-    private Registry clientRegistry;
-
-    private List<Integer> liveClients;
     String myUsername;
     int myPort;
 
@@ -32,10 +30,10 @@ public class Client {
 
     private CountDownLatch initializeLatch;
 
-    public Client() throws ExecutionException, InterruptedException, RemoteException, NotBoundException {
+    public Client() throws ExecutionException, InterruptedException, IOException, NotBoundException {
         initializeClient();
         bindSource();
-        inbox = new NotificationSink();
+        inbox = new NotificationSink(myPort);
         new Thread(inbox).start();
     }
 
@@ -45,7 +43,8 @@ public class Client {
         Future<Integer> future = executor.submit(new RegistryDiscoveryWorker());
 
 
-        if (future.get() == null) {
+        int port = future.get();
+        if (port == 0) {
             initializeLatch = new CountDownLatch(1);
             RegistryServer registryServer = new RegistryServer(initializeLatch);
 
@@ -58,9 +57,11 @@ public class Client {
             future = executor.submit(new RegistryDiscoveryWorker());
 
             myPort = future.get();
-
-            executor.shutdown();
         }
+        else {
+            myPort = port;
+        }
+        executor.shutdown();
 
     }
 
@@ -72,15 +73,24 @@ public class Client {
         }
     }
 
-    private void bindSource() throws RemoteException {
+    private void bindSource() throws IOException {
+        DatagramSocket socket = new DatagramSocket();
+        DatagramPacket packet;
         outbox = new NotificationSource();
 
         Registry registry = LocateRegistry.createRegistry(myPort);
-        try {
-            registry.bind("source", outbox);
-        } catch (AlreadyBoundException e) {
-            e.printStackTrace();
-        }
+        registry.rebind("source", outbox);
+
+        byte[] sendData = Json.createObjectBuilder()
+                .add("packet-type", Discovery.CONFIRM_BIND)
+                .add("port", myPort)
+                .build().toString().getBytes();
+
+        packet = new DatagramPacket(sendData, sendData.length, InetAddress.getLocalHost(), 8888);
+
+        socket.send(packet);
+        socket.close();
+
     }
 
     public static void main(String[] args) {
@@ -94,6 +104,7 @@ public class Client {
 
             String input;
             while (!(input=in.nextLine()).equals("/quit")) {
+                client.refreshHosts();
                 Notification notif = new Notification(client.myUsername, input);
                 client.send(notif);
             }
@@ -106,5 +117,18 @@ public class Client {
         } catch (NotBoundException e) {
             e.printStackTrace();
         }
+    }
+
+    private void refreshHosts() throws IOException {
+        DatagramSocket socket = new DatagramSocket();
+        DatagramPacket packet;
+
+        byte[] sendData = Discovery.JSON_REFRESH_HOSTS.toString().getBytes();
+
+        packet = new DatagramPacket(sendData, sendData.length, InetAddress.getLocalHost(), 8888);
+
+        socket.send(packet);
+
+        socket.close();
     }
 }

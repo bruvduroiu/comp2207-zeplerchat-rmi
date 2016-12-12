@@ -4,22 +4,19 @@ import com.bogdanbuduroiu.zeplerchat.common.model.comms.Discovery;
 
 import javax.json.Json;
 import javax.json.JsonObject;
-import javax.json.JsonValue;
 import java.io.ByteArrayInputStream;
-import java.io.ObjectInputStream;
+import java.io.IOException;
 import java.io.Serializable;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.InterfaceAddress;
+import java.net.*;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Created by bogdanbuduroiu on 11/12/2016.
@@ -27,18 +24,22 @@ import java.util.List;
 public class NotificationSink extends UnicastRemoteObject implements Notifiable, Runnable, Serializable {
 
     private List<Integer> registeredSources;
+    private final ExecutorService hostsListener = Executors.newSingleThreadExecutor();
+    private final int myPort;
 
-    public NotificationSink() throws RemoteException{
+    public NotificationSink(int myPort) throws RemoteException{
         registeredSources = new ArrayList<>();
+        this.myPort = myPort;
     }
 
     public void sendNotification(Notification notification) throws RemoteException {
+        System.out.printf("[%s]: %s", notification.getUsername(), notification.getMessage());
         System.out.println();
     }
 
-    private void registerSink() throws RemoteException, NotBoundException {
+    private void registerSink() throws RemoteException, NotBoundException, UnknownHostException {
         for (Integer port : registeredSources) {
-            Registry registry = LocateRegistry.getRegistry("localhost", port);
+            Registry registry = LocateRegistry.getRegistry(port);
             Subscribable source = (Subscribable) registry.lookup("source");
             source.subscribe(this);
         }
@@ -46,40 +47,50 @@ public class NotificationSink extends UnicastRemoteObject implements Notifiable,
 
     public void run() {
         try {
-        ByteArrayInputStream bais;
 
-        DatagramSocket socket = new DatagramSocket();
-        DatagramPacket packet;
+            DatagramSocket socket = new DatagramSocket();
+            DatagramPacket packet;
 
-        byte[] request = Discovery.JSON_REFRESH_HOSTS.toString().getBytes();
-        packet = new DatagramPacket(request, request.length, InetAddress.getLocalHost(), 8888);
+            byte[] request = Discovery.JSON_REFRESH_HOSTS.toString().getBytes();
+            packet = new DatagramPacket(request, request.length, InetAddress.getLocalHost(), 8888);
 
-        socket.send(packet);
+            socket.send(packet);
+            socket.close();
 
-            while (true) {
-                byte[] recvBuffer = new byte[15000];
+            hostsListener.execute(() -> {
 
-                packet = new DatagramPacket(recvBuffer, recvBuffer.length);
+                try {
+                    while (true) {
+                        byte[] recvBuffer = new byte[15000];
 
-                socket.receive(packet);
+                        final DatagramSocket recvSocket = new DatagramSocket(myPort);
+                        final DatagramPacket recvPacket = new DatagramPacket(recvBuffer, recvBuffer.length);
 
-                bais = new ByteArrayInputStream(packet.getData());
+                        recvSocket.receive(recvPacket);
 
-                JsonObject response = Json.createReader(bais).readObject();
+                        final ByteArrayInputStream bais = new ByteArrayInputStream(recvPacket.getData());
 
-                String packetType = response.getString("packet-type");
+                        JsonObject response = Json.createReader(bais).readObject();
 
-                if (packetType.equals(Discovery.HOSTS_DATA)) {
-                    ArrayList<Integer> ports = new ArrayList<>();
-                    String[] parse = response.getJsonArray("hosts").getJsonString(0).toString().replace("\"", "").split(",");
-                    for (String port : parse)
-                        registeredSources.add(Integer.parseInt(port));
-                    registerSink();
+                        String packetType = response.getString("packet-type");
+
+                        if (packetType.equals(Discovery.HOSTS_DATA)) {
+                            String[] parse = response.getJsonArray("hosts").getJsonString(0).toString().replace("\"", "").split(",");
+                            for (String port : parse)
+                                registeredSources.add(Integer.parseInt(port));
+                            registerSink();
+                        }
+                        recvSocket.close();
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (NotBoundException e) {
+                    e.printStackTrace();
                 }
-            }
+
+            });
+
         } catch (java.io.IOException e) {
-            e.printStackTrace();
-        } catch (NotBoundException e) {
             e.printStackTrace();
         }
     }

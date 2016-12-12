@@ -15,6 +15,7 @@ public class Discovery {
     public static final String SERVER_DISCOVERED = "SERVER_DISCOVERED";
     public static final String HOSTS_DATA = "HOSTS_DATA";
     public static final String PORT_ALREADY_REGISTERED = "PORT_ALREADY_REGISTERED";
+    public static final String CONFIRM_BIND = "CONFIRM_BIND";
 
     public static final JsonObject JSON_SERVER_DISCOVERY = Json.createObjectBuilder().add("packet-type", Discovery.SERVER_DISCOVERY).build();
     public static final JsonObject JSON_REFRESH_HOSTS = Json.createObjectBuilder().add("packet-type", Discovery.REFRESH_HOSTS).build();

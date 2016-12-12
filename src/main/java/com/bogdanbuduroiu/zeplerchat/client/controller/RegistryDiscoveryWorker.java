@@ -5,9 +5,6 @@ import com.bogdanbuduroiu.zeplerchat.common.model.comms.Discovery;
 import javax.json.Json;
 import javax.json.JsonObject;
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.net.*;
 import java.util.concurrent.Callable;
 
@@ -23,7 +20,7 @@ public class RegistryDiscoveryWorker implements Callable<Integer> {
 
 
         DatagramSocket socket = new DatagramSocket();
-        socket.setSoTimeout(3000);
+        socket.setSoTimeout(500);
 
         byte[] sendData = Discovery.JSON_SERVER_DISCOVERY.toString().getBytes();
 
@@ -51,7 +48,7 @@ public class RegistryDiscoveryWorker implements Callable<Integer> {
                 String packetType = response.getString("packet-type");
 
                 if (packetType.equals(Discovery.PORT_ALREADY_REGISTERED)) {
-
+                    System.out.println("ohoh");
                 }
                 else if (packetType.equals(Discovery.SERVER_DISCOVERED)) {
                     return response.getInt("port");
@@ -61,6 +58,6 @@ public class RegistryDiscoveryWorker implements Callable<Integer> {
                 attempts--;
             }
         }
-        return null;
+        return 0;
     }
 }
