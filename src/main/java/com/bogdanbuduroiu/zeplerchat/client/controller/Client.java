@@ -24,6 +24,7 @@ public class Client {
 
     String myUsername;
     int myPort;
+    boolean initialized = false;
 
     private NotificationSink inbox;
     private NotificationSource outbox;
@@ -32,37 +33,54 @@ public class Client {
 
     public Client() throws ExecutionException, InterruptedException, IOException, NotBoundException {
         initializeClient();
-        bindSource();
-        inbox = new NotificationSink(myPort);
-        new Thread(inbox).start();
     }
 
     private void initializeClient() throws ExecutionException, InterruptedException {
 
-        ExecutorService executor = Executors.newSingleThreadExecutor();
-        Future<Integer> future = executor.submit(new RegistryDiscoveryWorker());
+        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+        scheduler.scheduleAtFixedRate(
+                () -> {
+                    try {
+                        ExecutorService executor = Executors.newSingleThreadExecutor();
+                        Future<Boolean> heartbeatFuture = executor.submit(new HeartbeatWorker());
 
+                        boolean isAlive = heartbeatFuture.get();
+                        if (!isAlive) {
+                            initializeLatch = new CountDownLatch(1);
+                            RegistryServer registryServer = new RegistryServer(initializeLatch);
 
-        int port = future.get();
-        if (port == 0) {
-            initializeLatch = new CountDownLatch(1);
-            RegistryServer registryServer = new RegistryServer(initializeLatch);
+                            registryServer.start();
 
-            registryServer.start();
+                            executor = Executors.newSingleThreadExecutor();
 
-            executor = Executors.newSingleThreadExecutor();
+                            initializeLatch.await();
+                        }
 
-            initializeLatch.await();
-
-            future = executor.submit(new RegistryDiscoveryWorker());
-
-            myPort = future.get();
-        }
-        else {
-            myPort = port;
-        }
-        executor.shutdown();
-
+                        if (myPort == 0) {
+                            Future<Integer> future = executor.submit(new RegistryDiscoveryWorker());
+                            myPort = future.get();
+                        }
+                        if (!initialized) {
+                            bindSource();
+                            inbox = new NotificationSink(myPort);
+                            new Thread(inbox).start();
+                            initialized = true;
+                        }
+                        executor.shutdown();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    } catch (ExecutionException e) {
+                        e.printStackTrace();
+                    } catch (RemoteException e) {
+                        e.printStackTrace();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                },
+                0,
+                10,
+                TimeUnit.SECONDS
+        );
     }
 
     public void send(Notification notification) {
@@ -77,6 +95,8 @@ public class Client {
         DatagramSocket socket = new DatagramSocket();
         DatagramPacket packet;
         outbox = new NotificationSource();
+
+        while(myPort == 0) {}
 
         Registry registry = LocateRegistry.createRegistry(myPort);
         registry.rebind("source", outbox);

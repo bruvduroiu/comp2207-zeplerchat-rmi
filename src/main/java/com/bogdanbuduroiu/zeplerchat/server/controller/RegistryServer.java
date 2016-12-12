@@ -78,12 +78,23 @@ public class RegistryServer extends Thread {
 
     private void processRequest(Request request) throws IOException {
         String packetType = request.recvJson.getString("packet-type");
+        System.out.println(getClass().getName() + ">>> Packet processed: " + packetType);
+
+        String responseStr;
         socket = new DatagramSocket();
 
         byte[] confirmationData;
         DatagramPacket packet;
 
-        if (packetType.equals(Discovery.SERVER_DISCOVERY)) {
+        if (packetType.equals(Discovery.HEARTBEAT_SYN)) {
+
+            confirmationData = Discovery.JSON_HEARTBEAT_ACK.toString().getBytes();
+
+            System.out.println(getClass().getName() + ">>> Server response: " + Discovery.HEARTBEAT_ACK);
+
+            socket.send(new DatagramPacket(confirmationData, confirmationData.length, request.address, request.port));
+
+        } else if (packetType.equals(Discovery.PORT_REGISTRATION_REQUEST)) {
 
             if (registeredPorts.contains(request.port)) {
 
@@ -92,26 +103,29 @@ public class RegistryServer extends Thread {
                         .add("port", request.port)
                         .build();
 
+                responseStr = Discovery.PORT_ALREADY_REGISTERED;
+
                 confirmationData = response.toString().getBytes();
                 packet = new DatagramPacket(confirmationData, confirmationData.length, request.address, request.port);
                 socket.send(packet);
             } else {
                 JsonObject response = Json.createObjectBuilder()
-                        .add("packet-type", Discovery.SERVER_DISCOVERED)
+                        .add("packet-type", Discovery.PORT_REGISTERED)
                         .add("port", request.port)
                         .build();
+
+                responseStr = Discovery.PORT_REGISTERED;
 
                 confirmationData = response.toString().getBytes();
 
                 socket.send(new DatagramPacket(confirmationData, confirmationData.length, request.address, request.port));
             }
-
+            System.out.println(getClass().getName() + ">>> Server response: " + responseStr);
 
         } else if (packetType.equals(Discovery.REFRESH_HOSTS)) {
             broadcastHosts();
         } else if (packetType.equals(Discovery.CONFIRM_BIND)) {
             registeredPorts.add(request.recvJson.getInt("port"));
-            System.out.println("Received Bind COnfirm.");
             broadcastHosts();
         }
     }
@@ -146,6 +160,7 @@ public class RegistryServer extends Thread {
             confirmationString += port.toString() + ",";
         confirmationString = new StringBuilder(confirmationString).deleteCharAt(confirmationString.length() - 1).toString();
 
+        System.out.println(getClass().getName() + ">>> Broadcast Hosts: " + confirmationString);
         JsonObject jsonObject = Json.createObjectBuilder()
                 .add("packet-type", Discovery.HOSTS_DATA)
                 .add("hosts", Json.createArrayBuilder().add(confirmationString))
