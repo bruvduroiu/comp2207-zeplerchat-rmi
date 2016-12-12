@@ -1,6 +1,7 @@
 package com.bogdanbuduroiu.zeplerchat.common.model.notifs;
 
 import com.bogdanbuduroiu.zeplerchat.common.model.comms.Discovery;
+import com.bogdanbuduroiu.zeplerchat.common.model.config.Config;
 
 import javax.json.Json;
 import javax.json.JsonObject;
@@ -52,7 +53,7 @@ public class NotificationSink extends UnicastRemoteObject implements Notifiable,
             DatagramPacket packet;
 
             byte[] request = Discovery.JSON_REFRESH_HOSTS.toString().getBytes();
-            packet = new DatagramPacket(request, request.length, InetAddress.getLocalHost(), 8888);
+            packet = new DatagramPacket(request, request.length, InetAddress.getLocalHost(), Config.NS_PORT);
 
             socket.send(packet);
             socket.close();

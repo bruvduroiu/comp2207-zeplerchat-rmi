@@ -1,6 +1,7 @@
 package com.bogdanbuduroiu.zeplerchat.client.controller;
 
 import com.bogdanbuduroiu.zeplerchat.common.model.comms.Discovery;
+import com.bogdanbuduroiu.zeplerchat.common.model.config.Config;
 import com.bogdanbuduroiu.zeplerchat.common.model.notifs.Notification;
 import com.bogdanbuduroiu.zeplerchat.common.model.notifs.NotificationSink;
 import com.bogdanbuduroiu.zeplerchat.common.model.notifs.NotificationSource;
@@ -85,7 +86,7 @@ public class Client {
                 .add("port", myPort)
                 .build().toString().getBytes();
 
-        packet = new DatagramPacket(sendData, sendData.length, InetAddress.getLocalHost(), 8888);
+        packet = new DatagramPacket(sendData, sendData.length, InetAddress.getLocalHost(), Config.NS_PORT);
 
         socket.send(packet);
         socket.close();
@@ -124,7 +125,7 @@ public class Client {
 
         byte[] sendData = Discovery.JSON_REFRESH_HOSTS.toString().getBytes();
 
-        packet = new DatagramPacket(sendData, sendData.length, InetAddress.getLocalHost(), 8888);
+        packet = new DatagramPacket(sendData, sendData.length, InetAddress.getLocalHost(), Config.NS_PORT);
 
         socket.send(packet);
 

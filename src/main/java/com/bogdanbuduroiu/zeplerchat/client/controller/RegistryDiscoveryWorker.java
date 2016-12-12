@@ -1,6 +1,7 @@
 package com.bogdanbuduroiu.zeplerchat.client.controller;
 
 import com.bogdanbuduroiu.zeplerchat.common.model.comms.Discovery;
+import com.bogdanbuduroiu.zeplerchat.common.model.config.Config;
 
 import javax.json.Json;
 import javax.json.JsonObject;
@@ -24,7 +25,7 @@ public class RegistryDiscoveryWorker implements Callable<Integer> {
 
         byte[] sendData = Discovery.JSON_SERVER_DISCOVERY.toString().getBytes();
 
-        DatagramPacket packet = new DatagramPacket(sendData, sendData.length, InetAddress.getLocalHost(), 8888);
+        DatagramPacket packet = new DatagramPacket(sendData, sendData.length, InetAddress.getLocalHost(), Config.NS_PORT);
 
         socket.send(packet);
         System.out.println(getClass().getName() + ">>> Attempting to register with RegistryServer.");

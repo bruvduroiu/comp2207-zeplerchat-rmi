@@ -1,6 +1,7 @@
 package com.bogdanbuduroiu.zeplerchat.server.controller;
 
 import com.bogdanbuduroiu.zeplerchat.common.model.comms.Discovery;
+import com.bogdanbuduroiu.zeplerchat.common.model.config.Config;
 
 import javax.json.*;
 
@@ -38,7 +39,7 @@ public class RegistryServer extends Thread {
                     TimeUnit.SECONDS
             );
 
-            socket = new DatagramSocket(8888, InetAddress.getLocalHost());
+            socket = new DatagramSocket(Config.NS_PORT, InetAddress.getLocalHost());
 
             System.out.println(getClass().getName() + ">>> Ready to receive broadcast packets!");
 
