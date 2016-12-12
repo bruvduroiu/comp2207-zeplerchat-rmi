@@ -16,9 +16,12 @@ public class Discovery {
     public static final String HOSTS_DATA = "HOSTS_DATA";
     public static final String PORT_ALREADY_REGISTERED = "PORT_ALREADY_REGISTERED";
     public static final String CONFIRM_BIND = "CONFIRM_BIND";
+    public static final String HEARTBEAT_SYN = "HEARTBEAT_SYN";
+    public static final String HEARTBEAT_ACK = "HEARTBEAT_ACK";
 
     public static final JsonObject JSON_SERVER_DISCOVERY = Json.createObjectBuilder().add("packet-type", Discovery.SERVER_DISCOVERY).build();
     public static final JsonObject JSON_REFRESH_HOSTS = Json.createObjectBuilder().add("packet-type", Discovery.REFRESH_HOSTS).build();
-    public static final JsonObject JSON_PORT_ALREADY_REGISTERED = Json.createObjectBuilder().add("packet-type", Discovery.PORT_ALREADY_REGISTERED).build();
+    public static final JsonObject JSON_HEARTBEAT_SYN = Json.createObjectBuilder().add("packet-type", Discovery.HEARTBEAT_SYN).build();
+    public static final JsonObject JSON_HEARTBEAT_ACK = Json.createObjectBuilder().add("packet-type", Discovery.HEARTBEAT_ACK).build();
 
 }
