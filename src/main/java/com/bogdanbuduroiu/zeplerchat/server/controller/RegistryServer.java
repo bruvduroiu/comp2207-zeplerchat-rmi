@@ -17,7 +17,7 @@ import java.util.concurrent.*;
 
 public class RegistryServer extends Thread {
 
-    List<Integer> registeredPorts = new ArrayList<Integer>();
+    List<Integer> registeredPorts;
 
     private CountDownLatch latchInitialize;
     private final ScheduledExecutorService hostsScheduler = Executors.newSingleThreadScheduledExecutor();
@@ -26,15 +26,20 @@ public class RegistryServer extends Thread {
     private DatagramSocket socket;
     ByteArrayInputStream bais;
 
+    private CountDownLatch electionLatch;
+
     public RegistryServer(CountDownLatch latchInitialize) {
         this.latchInitialize = latchInitialize;
+        this.electionLatch = new CountDownLatch(1);
         this.requestQueue = new ArrayDeque<>();
+        this.registeredPorts = new ArrayList<>();
     }
 
     @Override
     public void run() {
         DatagramSocket socket;
 
+        System.out.println(getClass().getName() + ">>> Lost connection to server. Initializing Naming Server on this client...");
 
         try {
             hostsScheduler.scheduleAtFixedRate(
@@ -70,7 +75,8 @@ public class RegistryServer extends Thread {
 
             }
         } catch (SocketException e) {
-            e.printStackTrace();
+            if (!(e instanceof BindException))
+                e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -169,4 +175,17 @@ public class RegistryServer extends Thread {
         return jsonObject;
     }
 
+    private boolean leaderElection() throws SocketException {
+        Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+
+        while (interfaces.hasMoreElements()) {
+
+            NetworkInterface networkInterface = interfaces.nextElement();
+
+            if (networkInterface.isUp() && networkInterface.isLoopback()) {
+
+            }
+        }
+        return false;
+    }
 }

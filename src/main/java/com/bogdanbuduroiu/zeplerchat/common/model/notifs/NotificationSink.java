@@ -77,6 +77,7 @@ public class NotificationSink extends UnicastRemoteObject implements Notifiable,
 
                         if (packetType.equals(Discovery.HOSTS_DATA)) {
                             String[] parse = response.getJsonArray("hosts").getJsonString(0).toString().replace("\"", "").split(",");
+                            registeredSources = new ArrayList<>();
                             for (String port : parse)
                                 registeredSources.add(Integer.parseInt(port));
                             registerSink();

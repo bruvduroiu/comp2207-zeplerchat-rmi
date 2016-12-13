@@ -17,6 +17,7 @@ public class Discovery {
     public static final String CONFIRM_BIND = "CONFIRM_BIND";
     public static final String HEARTBEAT_SYN = "HEARTBEAT_SYN";
     public static final String HEARTBEAT_ACK = "HEARTBEAT_ACK";
+    public static final String LEADER_ELECTION = "LEADER_ELECTION";
 
     public static final JsonObject JSON_PORT_REGISTRATION_REQUEST = Json.createObjectBuilder().add("packet-type", Discovery.PORT_REGISTRATION_REQUEST).build();
     public static final JsonObject JSON_REFRESH_HOSTS = Json.createObjectBuilder().add("packet-type", Discovery.REFRESH_HOSTS).build();

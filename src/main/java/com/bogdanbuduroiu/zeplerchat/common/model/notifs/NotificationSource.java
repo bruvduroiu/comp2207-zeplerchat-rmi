@@ -1,6 +1,7 @@
 package com.bogdanbuduroiu.zeplerchat.common.model.notifs;
 
 import java.io.Serializable;
+import java.rmi.ConnectException;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
@@ -20,8 +21,13 @@ public class NotificationSource extends UnicastRemoteObject implements Subscriba
     }
 
     public void broadcastNotification(Notification notification) throws RemoteException{
-        for (Notifiable sink : registeredSinks)
-            sink.sendNotification(notification);
+        for (Notifiable sink : registeredSinks) {
+            try {
+                sink.sendNotification(notification);
+            } catch (ConnectException e) {
+                registeredSinks.remove(sink);
+            }
+        }
     }
 
     @Override
