@@ -1,45 +1,40 @@
 package com.bogdanbuduroiu.zeplerchat.common.model.notifs;
 
-import java.rmi.NotBoundException;
+import java.io.Serializable;
+import java.rmi.ConnectException;
 import java.rmi.RemoteException;
-import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
+import java.rmi.server.UnicastRemoteObject;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 /**
- * Created by bogdanbuduroiu on 10/12/2016.
+ * Created by bogdanbuduroiu on 11/12/2016.
  */
-public class NotificationSource {
+public class NotificationSource extends UnicastRemoteObject implements Subscribable, Serializable{
 
     Set<Notifiable> registeredSinks;
-    List<Integer> registeredPorts;
 
-    public NotificationSource(List<Integer> registeredPorts) {
-        this.registeredPorts = registeredPorts;
-        this.registeredSinks = new HashSet<Notifiable>();
-        initializeSource();
+    public NotificationSource() throws RemoteException {
+        registeredSinks = new HashSet<>();
     }
 
-
-    private void initializeSource() {
-        Registry registry;
-        for (Integer port : registeredPorts) {
+    public void broadcastNotification(Notification notification) throws RemoteException{
+        for (Notifiable sink : registeredSinks) {
             try {
-                registry = LocateRegistry.getRegistry("localhost", port);
-                Notifiable sink = (Notifiable) registry.lookup("inbox");
-                registeredSinks.add(sink);
-            } catch (NotBoundException e) {
-                e.printStackTrace();
-            } catch (RemoteException e) {
-                e.printStackTrace();
+                sink.sendNotification(notification);
+            } catch (ConnectException e) {
+                registeredSinks.remove(sink);
             }
         }
     }
 
-    public void sendNotification(Notification notification) throws RemoteException {
-        for (Notifiable sink : registeredSinks)
-            sink.sendNotification(notification);
+    @Override
+    public boolean subscribe(Notifiable notifiable) throws RemoteException {
+        if (registeredSinks.contains(notifiable))
+            return false;
+        registeredSinks.add(notifiable);
+        return true;
     }
 }
