@@ -26,7 +26,7 @@ public class RegistryDiscoveryWorker implements Callable<Integer> {
         DatagramPacket packet = new DatagramPacket(sendData, sendData.length, InetAddress.getLocalHost(), Config.NS_PORT);
 
         socket.send(packet);
-        System.out.println(getClass().getName() + ">>> Attempting to register with RegistryServer.");
+//        System.out.println(getClass().getName() + ">>> Attempting to register with RegistryServer.");
 
 
         byte[] recvBuffer = new byte[15000];

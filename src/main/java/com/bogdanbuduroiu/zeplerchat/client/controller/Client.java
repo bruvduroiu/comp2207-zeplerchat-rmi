@@ -119,13 +119,14 @@ public class Client {
         try {
             Scanner in = new Scanner(System.in);
 
-            Client client = new Client();
-
             System.out.print("Enter your username to log in:");
-            client.myUsername = in.nextLine();
+            String username = in.nextLine();
+
+            Client client = new Client();
+            client.myUsername = username;
 
             String input;
-            while (!(input=in.nextLine()).equals("/quit")) {
+            while (!(input=in.nextLine()).equals("quit()")) {
                 client.refreshHosts();
                 Notification notif = new Notification(client.myUsername, input);
                 client.send(notif);

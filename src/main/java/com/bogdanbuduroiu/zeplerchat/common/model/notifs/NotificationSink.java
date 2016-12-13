@@ -35,8 +35,9 @@ public class NotificationSink extends UnicastRemoteObject implements Notifiable,
     }
 
     public void sendNotification(Notification notification) throws RemoteException {
-        System.out.printf("[%s]: %s", notification.getUsername(), notification.getMessage());
+//        System.out.printf("[%s]: %s", notification.getUsername(), notification.getMessage());
         System.out.println();
+        System.out.println("[" + notification.getUsername() + "]: " + notification.getMessage());
     }
 
     private void registerSink() throws RemoteException, NotBoundException, UnknownHostException {

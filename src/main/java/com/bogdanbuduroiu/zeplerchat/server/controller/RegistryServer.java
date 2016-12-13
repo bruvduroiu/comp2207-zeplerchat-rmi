@@ -49,7 +49,7 @@ public class RegistryServer extends Thread {
 
             socket = new DatagramSocket(Config.NS_PORT, InetAddress.getLocalHost());
 
-            System.out.println(getClass().getName() + ">>> Ready to receive broadcast packets!");
+//            System.out.println(getClass().getName() + ">>> Ready to receive broadcast packets!");
 
             while (true) {
 
@@ -82,7 +82,7 @@ public class RegistryServer extends Thread {
 
     private void processRequest(Request request) throws IOException {
         String packetType = request.recvJson.getString("packet-type");
-        System.out.println(getClass().getName() + ">>> Packet processed: " + packetType);
+//        System.out.println(getClass().getName() + ">>> Packet processed: " + packetType);
 
         String responseStr;
         socket = new DatagramSocket();
@@ -94,7 +94,7 @@ public class RegistryServer extends Thread {
 
             confirmationData = Discovery.JSON_HEARTBEAT_ACK.toString().getBytes();
 
-            System.out.println(getClass().getName() + ">>> Server response: " + Discovery.HEARTBEAT_ACK);
+//            System.out.println(getClass().getName() + ">>> Server response: " + Discovery.HEARTBEAT_ACK);
 
             socket.send(new DatagramPacket(confirmationData, confirmationData.length, request.address, request.port));
 
@@ -124,7 +124,7 @@ public class RegistryServer extends Thread {
 
                 socket.send(new DatagramPacket(confirmationData, confirmationData.length, request.address, request.port));
             }
-            System.out.println(getClass().getName() + ">>> Server response: " + responseStr);
+//            System.out.println(getClass().getName() + ">>> Server response: " + responseStr);
 
         } else if (packetType.equals(Discovery.REFRESH_HOSTS)) {
             broadcastHosts();
@@ -164,7 +164,7 @@ public class RegistryServer extends Thread {
             confirmationString += port.toString() + ",";
         confirmationString = new StringBuilder(confirmationString).deleteCharAt(confirmationString.length() - 1).toString();
 
-        System.out.println(getClass().getName() + ">>> Broadcast Hosts: " + confirmationString);
+//        System.out.println(getClass().getName() + ">>> Broadcast Hosts: " + confirmationString);
         JsonObject jsonObject = Json.createObjectBuilder()
                 .add("packet-type", Discovery.HOSTS_DATA)
                 .add("hosts", Json.createArrayBuilder().add(confirmationString))
