@@ -21,7 +21,6 @@ public class Discovery {
 
     public static final JsonObject JSON_PORT_REGISTRATION_REQUEST = Json.createObjectBuilder().add("packet-type", Discovery.PORT_REGISTRATION_REQUEST).build();
     public static final JsonObject JSON_REFRESH_HOSTS = Json.createObjectBuilder().add("packet-type", Discovery.REFRESH_HOSTS).build();
-    public static final JsonObject JSON_HEARTBEAT_SYN = Json.createObjectBuilder().add("packet-type", Discovery.HEARTBEAT_SYN).build();
     public static final JsonObject JSON_HEARTBEAT_ACK = Json.createObjectBuilder().add("packet-type", Discovery.HEARTBEAT_ACK).build();
 
 }

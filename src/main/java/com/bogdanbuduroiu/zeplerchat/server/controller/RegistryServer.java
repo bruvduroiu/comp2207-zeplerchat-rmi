@@ -39,8 +39,6 @@ public class RegistryServer extends Thread {
     public void run() {
         DatagramSocket socket;
 
-        System.out.println(getClass().getName() + ">>> Lost connection to server. Initializing Naming Server on this client...");
-
         try {
             hostsScheduler.scheduleAtFixedRate(
                     () -> broadcastHosts(),
