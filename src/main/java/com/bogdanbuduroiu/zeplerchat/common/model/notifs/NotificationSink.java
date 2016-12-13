@@ -9,12 +9,13 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.*;
-import java.rmi.NotBoundException;
-import java.rmi.RemoteException;
+import java.net.UnknownHostException;
+import java.rmi.*;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -39,10 +40,17 @@ public class NotificationSink extends UnicastRemoteObject implements Notifiable,
     }
 
     private void registerSink() throws RemoteException, NotBoundException, UnknownHostException {
-        for (Integer port : registeredSources) {
-            Registry registry = LocateRegistry.getRegistry(port);
-            Subscribable source = (Subscribable) registry.lookup("source");
-            source.subscribe(this);
+        Iterator<Integer> portsIter = registeredSources.iterator();
+        while (portsIter.hasNext()){
+            int port = portsIter.next();
+            try {
+
+                Registry registry = LocateRegistry.getRegistry(port);
+                Subscribable source = (Subscribable) registry.lookup("source");
+                source.subscribe(this);
+            } catch (java.rmi.ConnectException e) {
+                portsIter.remove();
+            }
         }
     }
 
@@ -77,6 +85,7 @@ public class NotificationSink extends UnicastRemoteObject implements Notifiable,
 
                         if (packetType.equals(Discovery.HOSTS_DATA)) {
                             String[] parse = response.getJsonArray("hosts").getJsonString(0).toString().replace("\"", "").split(",");
+                            registeredSources = new ArrayList<>();
                             for (String port : parse)
                                 registeredSources.add(Integer.parseInt(port));
                             registerSink();

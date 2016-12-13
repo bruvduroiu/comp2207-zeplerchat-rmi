@@ -14,8 +14,6 @@ import java.util.concurrent.Callable;
  */
 public class RegistryDiscoveryWorker implements Callable<Integer> {
 
-    int attempts = 3;
-
     public Integer call() throws Exception {
         ByteArrayInputStream bais;
 
@@ -23,41 +21,34 @@ public class RegistryDiscoveryWorker implements Callable<Integer> {
         DatagramSocket socket = new DatagramSocket();
         socket.setSoTimeout(500);
 
-        byte[] sendData = Discovery.JSON_SERVER_DISCOVERY.toString().getBytes();
+        byte[] sendData = Discovery.JSON_PORT_REGISTRATION_REQUEST.toString().getBytes();
 
         DatagramPacket packet = new DatagramPacket(sendData, sendData.length, InetAddress.getLocalHost(), Config.NS_PORT);
 
         socket.send(packet);
         System.out.println(getClass().getName() + ">>> Attempting to register with RegistryServer.");
 
-        while (attempts > 0) {
 
-            byte[] recvBuffer = new byte[15000];
-            DatagramPacket recvPacket = new DatagramPacket(recvBuffer, recvBuffer.length);
+        byte[] recvBuffer = new byte[15000];
+        DatagramPacket recvPacket = new DatagramPacket(recvBuffer, recvBuffer.length);
 
-            JsonObject response;
+        JsonObject response;
 
-            try {
-                socket.receive(recvPacket);
+        socket.receive(recvPacket);
 
-                bais = new ByteArrayInputStream(recvPacket.getData());
+        bais = new ByteArrayInputStream(recvPacket.getData());
 
-                response = Json.createReader(bais).readObject();
+        response = Json.createReader(bais).readObject();
 
-                bais.close();
+        bais.close();
 
-                String packetType = response.getString("packet-type");
+        String packetType = response.getString("packet-type");
 
-                if (packetType.equals(Discovery.PORT_ALREADY_REGISTERED)) {
-                    System.out.println("ohoh");
-                }
-                else if (packetType.equals(Discovery.SERVER_DISCOVERED)) {
-                    return response.getInt("port");
-                }
-            }
-            catch (SocketTimeoutException e) {
-                attempts--;
-            }
+        if (packetType.equals(Discovery.PORT_ALREADY_REGISTERED)) {
+            return response.getInt("port");
+        }
+        else if (packetType.equals(Discovery.PORT_REGISTERED)) {
+            return response.getInt("port");
         }
         return 0;
     }
