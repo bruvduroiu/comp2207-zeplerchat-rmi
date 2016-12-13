@@ -27,7 +27,12 @@ public class HeartbeatWorker implements Callable<Boolean> {
         DatagramSocket socket = new DatagramSocket();
         socket.setSoTimeout(500);
 
-        byte[] sendData = Discovery.JSON_HEARTBEAT_SYN.toString().getBytes();
+        JsonObject heartbeatSyn = Json.createObjectBuilder()
+                .add("packet-type", Discovery.HEARTBEAT_SYN)
+                .add("timestamp", System.currentTimeMillis())
+                .build();
+
+        byte[] sendData = heartbeatSyn.toString().getBytes();
 
         DatagramPacket packet = new DatagramPacket(sendData, sendData.length, InetAddress.getLocalHost(), Config.NS_PORT);
 
@@ -51,14 +56,17 @@ public class HeartbeatWorker implements Callable<Boolean> {
 
                 String packetType = response.getString("packet-type");
 
-                if (packetType.equals(Discovery.HEARTBEAT_ACK))
+                if (packetType.equals(Discovery.HEARTBEAT_ACK)) {
+                    socket.close();
                     return true;
+                }
 
             }
             catch (SocketTimeoutException e) {
                 attempts--;
             }
         }
+        socket.close();
         return false;
     }
 }

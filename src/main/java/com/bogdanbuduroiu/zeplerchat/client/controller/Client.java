@@ -46,6 +46,8 @@ public class Client {
 
                         boolean isAlive = heartbeatFuture.get();
                         if (!isAlive) {
+                            myPort = 0;
+                            initialized = false;
                             initializeLatch = new CountDownLatch(1);
                             RegistryServer registryServer = new RegistryServer(initializeLatch);
 
