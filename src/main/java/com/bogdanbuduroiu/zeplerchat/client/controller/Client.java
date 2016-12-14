@@ -59,7 +59,7 @@ public class Client {
                         }
 
                         if (myPort == 0) {
-                            Future<Integer> future = executor.submit(new RegistryDiscoveryWorker());
+                            Future<Integer> future = executor.submit(new RegistrationWorker());
                             myPort = future.get();
                         }
                         if (!initialized) {
@@ -116,6 +116,7 @@ public class Client {
     }
 
     public static void main(String[] args) {
+
         try {
             Scanner in = new Scanner(System.in);
 

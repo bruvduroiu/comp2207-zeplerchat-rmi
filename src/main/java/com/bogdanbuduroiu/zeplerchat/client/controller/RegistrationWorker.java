@@ -12,7 +12,7 @@ import java.util.concurrent.Callable;
 /**
  * Created by bogdanbuduroiu on 10/12/2016.
  */
-public class RegistryDiscoveryWorker implements Callable<Integer> {
+public class RegistrationWorker implements Callable<Integer> {
 
     public Integer call() throws Exception {
         ByteArrayInputStream bais;
