@@ -28,10 +28,17 @@ public class NotificationSink extends UnicastRemoteObject implements Notifiable,
     private List<Integer> registeredSources;
     private final ExecutorService hostsListener = Executors.newSingleThreadExecutor();
     private final int myPort;
+    private String username;
 
-    public NotificationSink(int myPort) throws RemoteException{
+    public NotificationSink(int myPort, String username) throws RemoteException{
         registeredSources = new ArrayList<>();
+        this.username = username;
+
         this.myPort = myPort;
+    }
+
+    public String getUsername() throws RemoteException {
+        return username;
     }
 
     public void sendNotification(Notification notification) throws RemoteException {
@@ -48,7 +55,7 @@ public class NotificationSink extends UnicastRemoteObject implements Notifiable,
 
                 Registry registry = LocateRegistry.getRegistry(port);
                 Subscribable source = (Subscribable) registry.lookup("source");
-                source.subscribe(this);
+                source.subscribe(this, username);
             } catch (java.rmi.ConnectException e) {
                 portsIter.remove();
             }

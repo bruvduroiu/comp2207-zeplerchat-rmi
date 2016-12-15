@@ -64,7 +64,7 @@ public class Client {
                         }
                         if (!initialized) {
                             bindSource();
-                            inbox = new NotificationSink(myPort);
+                            inbox = new NotificationSink(myPort, myUsername);
                             new Thread(inbox).start();
                             initialized = true;
                         }
