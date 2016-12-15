@@ -9,4 +9,6 @@ import java.rmi.RemoteException;
 public interface Notifiable extends Remote {
 
     void sendNotification(Notification notification) throws RemoteException;
+
+    String getUsername() throws RemoteException;
 }
