@@ -47,7 +47,7 @@ public class NotificationSource extends UnicastRemoteObject implements Subscriba
 
     @Override
     public boolean subscribe(Notifiable notifiable) throws RemoteException {
-        if (registeredSinks.containsKey(notifiable))
+        if (registeredSinks.containsValue(notifiable.getUsername()))
             return false;
         registeredSinks.put(notifiable, notifiable.getUsername());
 
