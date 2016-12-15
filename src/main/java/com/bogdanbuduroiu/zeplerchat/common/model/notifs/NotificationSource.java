@@ -11,8 +11,8 @@ import java.util.*;
  */
 public class NotificationSource extends UnicastRemoteObject implements Subscribable, Serializable{
 
-    Map<Notifiable, String> registeredSinks;
-    Map<String, Deque<Notification>> queuedMessages;
+    private Map<Notifiable, String> registeredSinks;
+    private Map<String, Deque<Notification>> queuedMessages;
 
     public NotificationSource() throws RemoteException {
         registeredSinks = new HashMap<>();
@@ -27,13 +27,9 @@ public class NotificationSource extends UnicastRemoteObject implements Subscriba
             try {
                 if (!queuedMessages.containsKey(sink.getUsername()))
                     queuedMessages.put(sink.getUsername(), new ArrayDeque<>());
-                else {
-                }
-
 
                 sink.sendNotification(notification);
             } catch (ConnectException e) {
-                queuedMessages.get(registeredSinks.get(sink)).addLast(notification);
                 sinkIterator.remove();
             }
         }
@@ -47,7 +43,7 @@ public class NotificationSource extends UnicastRemoteObject implements Subscriba
 
     @Override
     public boolean subscribe(Notifiable notifiable) throws RemoteException {
-        if (registeredSinks.containsValue(notifiable.getUsername()))
+        if (registeredSinks.containsKey(notifiable))
             return false;
         registeredSinks.put(notifiable, notifiable.getUsername());
 
