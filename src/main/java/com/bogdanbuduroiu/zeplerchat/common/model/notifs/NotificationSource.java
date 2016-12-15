@@ -34,6 +34,12 @@ public class NotificationSource extends UnicastRemoteObject implements Subscriba
                     }
                 }
 
+                for (String username : queuedMessages.keySet()) {
+                    if (!registeredSinks.containsValue(username)) {
+                        queuedMessages.get(username).addLast(notification);
+                    }
+                }
+
                 sink.sendNotification(notification);
             } catch (ConnectException e) {
                 queuedMessages.get(registeredSinks.get(sink)).addLast(notification);
