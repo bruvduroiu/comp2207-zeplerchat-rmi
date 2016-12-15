@@ -28,22 +28,19 @@ public class NotificationSource extends UnicastRemoteObject implements Subscriba
                 if (!queuedMessages.containsKey(sink.getUsername()))
                     queuedMessages.put(sink.getUsername(), new ArrayDeque<>());
                 else {
-                    Deque<Notification> missedMessages = queuedMessages.get(sink.getUsername());
-                    while (!missedMessages.isEmpty()) {
-                        sink.sendNotification(missedMessages.poll());
-                    }
                 }
 
-                for (String username : queuedMessages.keySet()) {
-                    if (!registeredSinks.containsValue(username)) {
-                        queuedMessages.get(username).addLast(notification);
-                    }
-                }
 
                 sink.sendNotification(notification);
             } catch (ConnectException e) {
                 queuedMessages.get(registeredSinks.get(sink)).addLast(notification);
                 sinkIterator.remove();
+            }
+        }
+
+        for (String username : queuedMessages.keySet()) {
+            if (!registeredSinks.containsValue(username)) {
+                queuedMessages.get(username).addLast(notification);
             }
         }
     }
@@ -53,6 +50,14 @@ public class NotificationSource extends UnicastRemoteObject implements Subscriba
         if (registeredSinks.containsKey(notifiable))
             return false;
         registeredSinks.put(notifiable, username);
+
+        if (queuedMessages.containsKey(username)) {
+            Deque<Notification> missedMessages = queuedMessages.get(username);
+            while (!missedMessages.isEmpty()) {
+                notifiable.sendNotification(missedMessages.poll());
+            }
+        }
+
         return true;
     }
 }
