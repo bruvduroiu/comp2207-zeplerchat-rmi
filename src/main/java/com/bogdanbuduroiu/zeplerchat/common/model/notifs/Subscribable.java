@@ -8,5 +8,5 @@ import java.rmi.RemoteException;
  */
 public interface Subscribable extends Remote {
 
-    boolean subscribe(Notifiable notifiable, String username) throws RemoteException;
+    boolean subscribe(Notifiable notifiable) throws RemoteException;
 }

@@ -55,7 +55,7 @@ public class NotificationSink extends UnicastRemoteObject implements Notifiable,
 
                 Registry registry = LocateRegistry.getRegistry(port);
                 Subscribable source = (Subscribable) registry.lookup("source");
-                source.subscribe(this, username);
+                source.subscribe(this);
             } catch (java.rmi.ConnectException e) {
                 portsIter.remove();
             }

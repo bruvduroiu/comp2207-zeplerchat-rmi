@@ -46,13 +46,13 @@ public class NotificationSource extends UnicastRemoteObject implements Subscriba
     }
 
     @Override
-    public boolean subscribe(Notifiable notifiable, String username) throws RemoteException {
+    public boolean subscribe(Notifiable notifiable) throws RemoteException {
         if (registeredSinks.containsKey(notifiable))
             return false;
-        registeredSinks.put(notifiable, username);
+        registeredSinks.put(notifiable, notifiable.getUsername());
 
-        if (queuedMessages.containsKey(username)) {
-            Deque<Notification> missedMessages = queuedMessages.get(username);
+        if (queuedMessages.containsKey(notifiable.getUsername())) {
+            Deque<Notification> missedMessages = queuedMessages.get(notifiable.getUsername());
             while (!missedMessages.isEmpty()) {
                 notifiable.sendNotification(missedMessages.poll());
             }
